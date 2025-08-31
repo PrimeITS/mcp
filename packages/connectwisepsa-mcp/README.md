@@ -109,7 +109,10 @@ Add the ConnectWise PSA server configuration:
 4. Go to the API Keys tab
 5. Generate new API keys if needed
 6. Copy the Public Key and Private Key
-7. Your Client ID is typically your company identifier + public key username
+7. Get your Client ID from the ConnectWise Developer Portal at https://developer.connectwise.com/ClientID
+   - The Client ID is a unique GUID assigned to your integration
+   - Never share your Client ID - it should be treated like a password
+   - Each company/integration needs its own unique Client ID
 
 ## Available Tools
 
