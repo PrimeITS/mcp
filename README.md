@@ -41,6 +41,21 @@ MCP server for HaloPSA API integration, enabling ticket management and reporting
 
 ---
 
+### 🔄 BackupRadar MCP Server
+**Package:** `@adamhancock/backupradar-mcp`  
+**Version:** 0.1.0
+
+MCP server for BackupRadar API integration, focused on backup listing, inspection, and result retrieval.
+
+**Features:**
+- Backup policy search with familiar filters and pagination
+- Single backup detail retrieval by ID
+- Backup execution result inspection via `/backups/{backupId}/results`
+
+[View Package →](./packages/backupradar-mcp)
+
+---
+
 ### 🔧 ConnectWise RMM MCP Server
 **Package:** `@adamhancock/connectwisermm-mcp`  
 **Version:** 0.1.0
@@ -82,6 +97,7 @@ Each MCP server can be installed independently using npm or pnpm:
 # Install a specific MCP server
 npm install @adamhancock/ninjarmm-mcp
 npm install @adamhancock/halopsa-mcp
+npm install @adamhancock/backupradar-mcp
 npm install @adamhancock/connectwisermm-mcp
 npm install @adamhancock/connectwisepsa-mcp
 ```
@@ -116,6 +132,17 @@ CONNECTWISE_PSA_URL=https://api-na.myconnectwise.net
 CONNECTWISE_CLIENT_ID=your_client_id
 CONNECTWISE_PUBLIC_KEY=your_public_key
 CONNECTWISE_PRIVATE_KEY=your_private_key
+```
+
+### BackupRadar
+```env
+BACKUPRADAR_BASE_URL=https://api.backupradar.com/v2
+BACKUPRADAR_API_KEY=your_api_key
+
+# Optional
+BACKUPRADAR_API_KEY_HEADER=ApiKey
+BACKUPRADAR_TIMEOUT_MS=30000
+BACKUPRADAR_USER_AGENT=my-mcp-integration/1.0
 ```
 
 ## Development
@@ -174,6 +201,7 @@ Each package may have its own license. Please check the individual package direc
 
 - NinjaOne RMM MCP: MIT
 - HaloPSA MCP: ISC
+- BackupRadar MCP: ISC
 - ConnectWise RMM MCP: ISC
 - ConnectWise PSA MCP: ISC
 
