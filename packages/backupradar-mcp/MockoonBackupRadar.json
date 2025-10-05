@@ -1,0 +1,416 @@
+{
+  "uuid": "e090005d-6371-4d90-b35a-db12b1c16545",
+  "lastMigration": 33,
+  "name": "Backup Radar API - 2.0",
+  "endpointPrefix": "",
+  "latency": 0,
+  "port": 3000,
+  "hostname": "lvh.me",
+  "folders": [],
+  "routes": [
+    {
+      "uuid": "735bb708-45d4-472c-badd-f56cbd467bc2",
+      "type": "http",
+      "documentation": "Get backups with pagination.",
+      "method": "get",
+      "endpoint": "backups",
+      "responses": [
+        {
+          "uuid": "e8b500e9-5842-47fa-853d-66058903ea07",
+          "body": "\"Invalid ApiKey\"",
+          "latency": 0,
+          "statusCode": 401,
+          "label": "Unauthorized (missing/empty ApiKey)",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rulesOperator": "OR",
+          "rules": [
+            {
+              "target": "header",
+              "modifier": "ApiKey",
+              "operator": "null",
+              "value": "",
+              "invert": false
+            },
+            {
+              "target": "header",
+              "modifier": "ApiKey",
+              "operator": "equals",
+              "value": "",
+              "invert": false
+            }
+          ],
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "ab9a7ee8-e978-4191-b9f8-0152124ae109",
+          "body": "{{!-- ===== Query params with defaults/coercion ===== --}}\n{{setVar 'pageSize'        (parseInt (queryParamRaw 'Size' '25'))}}\n{{setVar 'page'            (parseInt (queryParamRaw 'Page' '1'))}}\n{{setVar 'historyDays'     (parseInt (queryParamRaw 'historyDays' '365'))}}\n{{setVar 'seedDate'        (queryParamRaw 'date' '')}}\n\n{{!-- Specific filters (single-value only; MCP should send one value) --}}\n{{setVar 'companyFilter'   (queryParamRaw 'searchCompanyName' '')}}\n{{setVar 'methodFilter'    (queryParamRaw 'searchBackupMethod' '')}}\n{{setVar 'jobFilter'       (queryParamRaw 'searchJobName' '')}}\n{{setVar 'deviceFilter'    (queryParamRaw 'searchDeviceName' '')}}\n{{setVar 'tagFilter'       (queryParamRaw 'searchTag' '')}}\n{{setVar 'tooltipFilter'   (queryParamRaw 'searchTooltip' '')}}\n{{setVar 'statusFilter'    (queryParamRaw 'statuses' '')}}      {{!-- single status value --}}\n{{setVar 'filterScheduled' (queryParamRaw 'filterScheduled' '')}}\n{{setVar 'daysNoSuccess'   (queryParamRaw 'daysWithoutSuccess' '')}}\n{{setVar 'policyIdRaw'     (queryParamRaw 'policyIds' '')}}     {{!-- single id (if multiple, MCP should send the first) --}}\n\n{\n  \"Total\": {{int 1 99999}},\n  \"Page\": {{getVar 'page'}},\n  \"PageSize\": {{getVar 'pageSize'}},\n  \"TotalPages\": {{int 1 500}},\n  \"Results\": [\n    {{#repeat (getVar 'pageSize')}}\n      {{!-- ===== per-row resolved values (choose filter OR faker) ===== --}}\n\n      {{!-- Company --}}\n      {{#if (getVar 'companyFilter')}}\n        {{setVar 'rowCompany' (getVar 'companyFilter')}}\n      {{else}}\n        {{setVar 'rowCompany' (faker 'company.name')}}\n      {{/if}}\n\n      {{!-- Method --}}\n      {{#if (getVar 'methodFilter')}}\n        {{setVar 'rowMethod' (getVar 'methodFilter')}}\n      {{else}}\n        {{setVar 'rowMethod' (faker 'helpers.arrayElement' (array 'Veeam' 'Datto' 'AWS' 'Altaro' 'BackupExec' 'Windows Backups' 'Replibit API'))}}\n      {{/if}}\n\n      {{!-- Device --}}\n      {{#if (getVar 'deviceFilter')}}\n        {{setVar 'rowDevice' (getVar 'deviceFilter')}}\n      {{else}}\n        {{setVar 'rowDevicePrefix' (faker 'hacker.abbreviation')}}\n        {{setVar 'rowDeviceNum' (int 10 99)}}\n      {{/if}}\n\n      {{!-- Job --}}\n      {{#if (getVar 'jobFilter')}}\n        {{setVar 'rowJob' (getVar 'jobFilter')}}\n      {{else}}\n        {{setVar 'rowJobNoun' (faker 'word.noun')}}\n        {{setVar 'rowJobAdj'  (faker 'word.adjective')}}\n      {{/if}}\n\n      {{!-- Device type --}}\n      {{setVar 'rowDeviceType' (faker 'helpers.arrayElement' (array 'Server' 'Workstation'))}}\n\n      {{!-- Status (single filter value if provided) --}}\n      {{#if (getVar 'statusFilter')}}\n        {{setVar 'rowStatusName' (getVar 'statusFilter')}}\n      {{else}}\n        {{setVar 'rowStatusName' (faker 'helpers.arrayElement' (array 'Success' 'Warning' 'Failure' 'No Result'))}}\n      {{/if}}\n\n      {{!-- Backup type: id + matching name --}}\n      {{setVar 'rowBackupTypeId' (faker 'helpers.arrayElement' (array 0 1))}}\n      {{#if (eq (getVar 'rowBackupTypeId') 1)}}\n        {{setVar 'rowBackupTypeName' 'Alert'}}\n      {{else}}\n        {{setVar 'rowBackupTypeName' 'Backup'}}\n      {{/if}}\n\n      {{!-- Tags: ensure searchTag is present if provided; total extra tags 0..2 --}}\n      {{#if (getVar 'tagFilter')}}\n        {{setVar 'rowExtraTags' (int 0 2)}}  {{!-- we will prepend the filter tag --}}\n      {{else}}\n        {{setVar 'rowExtraTags' (int 0 3)}}\n      {{/if}}\n\n      {{!-- Scheduled flag: treat \"true\" (string) as true --}}\n      {{#if (eq (getVar 'filterScheduled') 'true')}}\n        {{setVar 'rowForceScheduled' 'true'}}\n      {{else}}\n        {{setVar 'rowForceScheduled' ''}}\n      {{/if}}\n\n      {{!-- Days without success: numeric if provided --}}\n      {{#if (getVar 'daysNoSuccess')}}\n        {{setVar 'rowDaysNoSuccess' (parseInt (getVar 'daysNoSuccess'))}}\n      {{else}}\n        {{setVar 'rowDaysNoSuccess' ''}}\n      {{/if}}\n\n      {{!-- BackupId: try to parse provided; else random --}}\n      {{#if (getVar 'policyIdRaw')}}\n        {{setVar 'rowBackupId' (parseInt (getVar 'policyIdRaw'))}}\n      {{else}}\n        {{setVar 'rowBackupId' (int 1 99999)}}\n      {{/if}}\n\n      {{!-- Dates: use seed date for lastResult if given --}}\n      {{#if (getVar 'seedDate')}}\n        {{setVar 'rowLastResult' (getVar 'seedDate')}}\n      {{else}}\n        {{setVar 'rowLastResult' (faker 'date.recent' days=(getVar 'historyDays'))}}\n      {{/if}}\n      {{setVar 'rowLastSuccess' (faker 'date.recent' days=(getVar 'historyDays'))}}\n\n    {\n      \"ticketingCompany\": \"{{getVar 'rowCompany'}}\",\n\n      \"status\": {\n        \"id\": {{int 1 99999}},\n        \"name\": \"{{getVar 'rowStatusName'}}\"\n      },\n\n      \"daysInStatus\": {{float 0 365 2}},\n      \"isVerified\": {{faker 'datatype.boolean'}},\n      \"lastResult\": \"{{getVar 'rowLastResult'}}\",\n      \"lastSuccess\": \"{{getVar 'rowLastSuccess'}}\",\n      \"ticketCount\": {{int 0 99999}},\n      \"failureThreshold\": {{float 0 10 1}},\n      \"treatWarningAsSuccess\": {{faker 'datatype.boolean'}},\n\n      \"note\": {{#if (getVar 'tooltipFilter')}}\n                \"{{getVar 'tooltipFilter'}}\"\n              {{else}}\n                {{#if (faker 'datatype.boolean')}} \"{{faker 'hacker.phrase'}}\" {{else}} null {{/if}}\n              {{/if}},\n\n      \"dayStartHour\": {{int 0 23}},\n\n      \"tags\": [\n        {{#if (getVar 'tagFilter')}}\n          \"{{getVar 'tagFilter'}}\"{{#if (gt (getVar 'rowExtraTags') 0)}},{{/if}}\n        {{/if}}\n        {{#repeat (getVar 'rowExtraTags')}}\n          \"{{faker 'helpers.arrayElement' (array 'Veeam' 'Datto' 'AWS' 'Altaro' 'Important' 'Ignore')}}\"\n          {{#unless @last}},{{/unless}}\n        {{/repeat}}\n      ],\n\n      \"standalone\": {{faker 'datatype.boolean'}},\n\n      \"history\": [\n        {{#repeat (int 0 3)}}\n        {\n          \"status\": {\n            \"id\": {{int 1 99999}},\n            \"name\": \"{{#if (getVar 'statusFilter')}}{{getVar 'statusFilter'}}{{else}}{{faker 'helpers.arrayElement' (array 'Success' 'Warning' 'Failure' 'No Result')}}{{/if}}\"\n          },\n          \"lastResultDate\": \"{{faker 'date.recent' days=(getVar 'historyDays')}}\",\n          \"isScheduled\": {{#if (getVar 'rowForceScheduled')}}true{{else}}{{faker 'datatype.boolean'}}{{/if}},\n          \"daysInStatus\": {{float 0 365 1}},\n          \"date\": \"{{faker 'date.recent' days=(getVar 'historyDays')}}\",\n          \"countFailure\": {{int 0 99999}},\n          \"countWarning\": {{int 0 99999}},\n          \"countSuccess\": {{int 0 99999}},\n          \"countNoResult\": {{int 0 99999}},\n          \"daysSinceLastResult\": {{float 0 365 1}},\n          \"daysSinceLastGoodResult\": {{#if (getVar 'rowDaysNoSuccess')}}{{getVar 'rowDaysNoSuccess'}}{{else}}{{float -1 365 1}}{{/if}},\n          \"resultsCount\": {{int 0 99999}}\n        }{{#unless @last}},{{/unless}}\n        {{/repeat}}\n      ],\n\n      \"backupId\": {{getVar 'rowBackupId'}},\n\n      \"companyName\": \"{{getVar 'rowCompany'}}\",\n      \"deviceName\": \"{{#if (getVar 'deviceFilter')}}{{getVar 'rowDevice'}}{{else}}{{getVar 'rowDevicePrefix'}}-{{getVar 'rowDeviceNum'}}{{/if}}\",\n      \"deviceType\": \"{{getVar 'rowDeviceType'}}\",\n      \"jobName\": \"{{#if (getVar 'jobFilter')}}{{getVar 'rowJob'}}{{else}}{{getVar 'rowJobNoun'}} {{getVar 'rowJobAdj'}} Report{{/if}}\",\n      \"methodName\": \"{{getVar 'rowMethod'}}\",\n\n      \"backupType\": {\n        \"id\": {{getVar 'rowBackupTypeId'}},\n        \"name\": \"{{getVar 'rowBackupTypeName'}}\"\n      }\n    }{{#unless @last}},{{/unless}}\n    {{/repeat}}\n  ]\n}\n",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "OK",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "",
+              "value": ""
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rulesOperator": "OR",
+          "rules": [
+            {
+              "target": "header",
+              "modifier": "ApiKey",
+              "operator": "regex",
+              "value": "^.+$",
+              "invert": false
+            }
+          ],
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "504ce7a8-2b0e-4dc7-8693-b5a828828b45",
+          "body": "\"\"",
+          "latency": 0,
+          "statusCode": 429,
+          "label": "Too Many Requests",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    },
+    {
+      "uuid": "afd5a9a2-3854-4e18-95ad-e5b8b26716b1",
+      "type": "http",
+      "documentation": "Get backups data.",
+      "method": "get",
+      "endpoint": "backups/:backupId",
+      "responses": [
+        {
+          "uuid": "60b140c4-d3b0-490f-866b-fd56f37c9acf",
+          "body": "\"Invalid ApiKey\"",
+          "latency": 0,
+          "statusCode": 401,
+          "label": "Unauthorized (missing/empty ApiKey)",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "rulesOperator": "OR",
+          "rules": [
+            {
+              "target": "header",
+              "modifier": "ApiKey",
+              "operator": "null",
+              "value": "",
+              "invert": false
+            },
+            {
+              "target": "header",
+              "modifier": "ApiKey",
+              "operator": "equals",
+              "value": "",
+              "invert": false
+            }
+          ],
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": [],
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false
+        },
+        {
+          "uuid": "1172a44e-3dec-4464-a3f0-23a79e968c34",
+          "body": "{\n  \"ticketingCompany\": \"{{faker 'company.name'}}\",\n  \"status\": {\n    \"id\": {{faker 'number.int' min=1 max=99999}},\n    \"name\": \"{{faker 'helpers.arrayElement' (array 'Success' 'Warning' 'Failure' 'No Result')}}\"\n  },\n  \"daysInStatus\": {{faker 'number.float' min=0 max=365 precision=0.01}},\n  \"isVerified\": {{faker 'helpers.arrayElement' (array true false)}},\n  \"lastResult\": \"{{faker 'date.recent' days=365}}\",\n  \"lastSuccess\": \"{{faker 'date.recent' days=365}}\",\n  \"ticketCount\": {{faker 'number.int' min=0 max=99999}},\n  \"failureThreshold\": {{faker 'number.float' min=0 max=10 precision=0.1}},\n  \"treatWarningAsSuccess\": {{faker 'helpers.arrayElement' (array true false)}},\n  \"note\": {{#if (faker 'helpers.arrayElement' (array true false))}}\"{{faker 'hacker.phrase'}}\"{{else}}null{{/if}},\n  \"dayStartHour\": {{faker 'number.int' min=0 max=23}},\n  \"tags\": [{{#repeat (faker 'number.int' min=0 max=3)}}\"{{faker 'helpers.arrayElement' (array 'Veeam' 'Datto' 'AWS' 'Altaro' 'Important' 'Ignore')}}\"{{/repeat}}],\n  \"standalone\": {{faker 'helpers.arrayElement' (array true false)}},\n  \"history\": [\n    {{#repeat (faker 'number.int' min=0 max=3)}}\n    {\n      \"status\": {\n        \"id\": {{faker 'number.int' min=1 max=99999}},\n        \"name\": \"{{faker 'helpers.arrayElement' (array 'Success' 'Warning' 'Failure' 'No Result')}}\"\n      },\n      \"lastResultDate\": \"{{faker 'date.recent' days=365}}\",\n      \"isScheduled\": {{faker 'helpers.arrayElement' (array true false)}},\n      \"daysInStatus\": {{faker 'number.float' min=0 max=365 precision=0.1}},\n      \"date\": \"{{faker 'date.recent' days=365}}\",\n      \"countFailure\": {{faker 'number.int' min=0 max=99999}},\n      \"countWarning\": {{faker 'number.int' min=0 max=99999}},\n      \"countSuccess\": {{faker 'number.int' min=0 max=99999}},\n      \"countNoResult\": {{faker 'number.int' min=0 max=99999}},\n      \"daysSinceLastResult\": {{faker 'number.float' min=0 max=365 precision=0.1}},\n      \"daysSinceLastGoodResult\": {{faker 'number.float' min=-1 max=365 precision=0.1}},\n      \"resultsCount\": {{faker 'number.int' min=0 max=99999}}\n    }{{#unless @last}},{{/unless}}\n    {{/repeat}}\n  ],\n  \"backupId\": {{#if (urlParam 'backupId')}}{{urlParam 'backupId'}}{{else}}{{faker 'number.int' min=1 max=99999}}{{/if}},\n  \"companyName\": \"{{faker 'company.name'}}\",\n  \"deviceName\": \"{{faker 'hacker.abbreviation'}}-{{faker 'number.int' min=10 max=99}}\",\n  \"deviceType\": \"{{faker 'helpers.arrayElement' (array 'Server' 'Workstation')}}\",\n  \"jobName\": \"{{faker 'word.noun'}} {{faker 'word.adjective'}} Report\",\n  \"methodName\": \"{{faker 'helpers.arrayElement' (array 'Veeam' 'Datto' 'AWS' 'Altaro' 'BackupExec' 'Windows Backups' 'Replibit API')}}\",\n  \"backupType\": {\n    \"id\": {{faker 'helpers.arrayElement' (array 0 1)}},\n    \"name\": \"{{faker 'helpers.arrayElement' (array 'Backup' 'Alert')}}\"\n  }\n}\n",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "OK",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rulesOperator": "OR",
+          "rules": [
+            {
+              "target": "header",
+              "modifier": "ApiKey",
+              "operator": "regex",
+              "value": "^.+$",
+              "invert": false
+            }
+          ],
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "d66fe7f6-8045-4181-afde-0e5b554e2b52",
+          "body": "\"\"",
+          "latency": 0,
+          "statusCode": 400,
+          "label": "Bad Request",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "503a5526-9764-48a5-875a-425cb3df3030",
+          "body": "\"\"",
+          "latency": 0,
+          "statusCode": 429,
+          "label": "Too Many Requests",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    },
+    {
+      "uuid": "60736f4f-2e26-4d40-8bdb-73cd54347243",
+      "type": "http",
+      "documentation": "Get results for backups for date.",
+      "method": "get",
+      "endpoint": "backups/:backupId/results",
+      "responses": [
+        {
+          "uuid": "87fa2290-8d26-4c26-a6f8-d35c3f3ed8ab",
+          "body": "\"Invalid ApiKey\"",
+          "latency": 0,
+          "statusCode": 401,
+          "label": "Unauthorized (missing/empty ApiKey)",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "rulesOperator": "OR",
+          "rules": [
+            {
+              "target": "header",
+              "modifier": "ApiKey",
+              "operator": "null",
+              "value": "",
+              "invert": false
+            },
+            {
+              "target": "header",
+              "modifier": "ApiKey",
+              "operator": "equals",
+              "value": "",
+              "invert": false
+            }
+          ],
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": [],
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false
+        },
+        {
+          "uuid": "3c2281b2-efdd-423a-aa9b-fbe9742b26ce",
+          "body": "{\n  \"Total\": {{faker 'number.int' max=99999}},\n  \"Page\": {{faker 'number.int' max=99999}},\n  \"PageSize\": {{faker 'number.int' max=99999}},\n  \"TotalPages\": {{faker 'number.int' max=99999}},\n  \"Results\": [\n    {\n      \"dateTime\": \"{{faker 'date.recent' 365}}\",\n      \"success\": {{faker 'datatype.boolean'}},\n      \"warning\": {{faker 'datatype.boolean'}},\n      \"failure\": {{faker 'datatype.boolean'}},\n      \"manual\": {{faker 'datatype.boolean'}},\n      \"resultId\": {{faker 'number.int' min=1 max=99999}}\n    }\n  ]\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "OK",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rulesOperator": "OR",
+          "rules": [
+            {
+              "target": "header",
+              "modifier": "ApiKey",
+              "operator": "regex",
+              "value": "^.+$",
+              "invert": false
+            }
+          ],
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "8c4783b2-f79c-4b7c-a581-40f2763acf0a",
+          "body": "\"\"",
+          "latency": 0,
+          "statusCode": 429,
+          "label": "Too Many Requests",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    }
+  ],
+  "rootChildren": [
+    {
+      "type": "route",
+      "uuid": "735bb708-45d4-472c-badd-f56cbd467bc2"
+    },
+    {
+      "type": "route",
+      "uuid": "afd5a9a2-3854-4e18-95ad-e5b8b26716b1"
+    },
+    {
+      "type": "route",
+      "uuid": "60736f4f-2e26-4d40-8bdb-73cd54347243"
+    }
+  ],
+  "proxyMode": false,
+  "proxyHost": "",
+  "proxyRemovePrefix": false,
+  "tlsOptions": {
+    "enabled": false,
+    "type": "CERT",
+    "pfxPath": "",
+    "certPath": "",
+    "keyPath": "",
+    "caPath": "",
+    "passphrase": ""
+  },
+  "cors": true,
+  "headers": [
+    {
+      "key": "Access-Control-Allow-Origin",
+      "value": "*"
+    },
+    {
+      "key": "Access-Control-Allow-Methods",
+      "value": "GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS"
+    },
+    {
+      "key": "Access-Control-Allow-Headers",
+      "value": "Content-Type, Origin, Accept, Authorization, Content-Length, X-Requested-With, ApiKey"
+    }
+  ],
+  "proxyReqHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "proxyResHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "data": [],
+  "callbacks": []
+}
