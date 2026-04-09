@@ -74,7 +74,7 @@ MCP server for ConnectWise RMM API integration, providing remote monitoring and 
 ---
 
 ### 📊 ConnectWise PSA MCP Server
-**Package:** `@adamhancock/connectwisepsa-mcp`  
+**Package:** `@adamhancock/connectwisepsa-mcp`
 **Version:** 0.1.1
 
 MCP server for ConnectWise PSA API integration, enabling professional services automation workflows.
@@ -89,6 +89,25 @@ MCP server for ConnectWise PSA API integration, enabling professional services a
 
 [View Package →](./packages/connectwisepsa-mcp)
 
+---
+
+### 🛡️ Huntress MCP Server
+**Package:** `@adamhancock/huntress-mcp`
+**Version:** 0.1.0
+
+MCP server for Huntress API integration, providing cybersecurity monitoring, threat detection, and incident response capabilities.
+
+**Features:**
+- Account and actor management
+- Agent (endpoint) monitoring across Windows, macOS, and Linux
+- Organization management
+- Security incident reports and analysis
+- Real-time security signals and events
+- Summary and billing reports
+- Threat detection and remediation tracking
+
+[View Package →](./packages/huntress-mcp)
+
 ## Installation
 
 Each MCP server can be installed independently using npm or pnpm:
@@ -100,6 +119,7 @@ npm install @adamhancock/halopsa-mcp
 npm install @adamhancock/backupradar-mcp
 npm install @adamhancock/connectwisermm-mcp
 npm install @adamhancock/connectwisepsa-mcp
+npm install @adamhancock/huntress-mcp
 ```
 
 ## Configuration
@@ -143,6 +163,15 @@ BACKUPRADAR_API_KEY=your_api_key
 BACKUPRADAR_API_KEY_HEADER=ApiKey
 BACKUPRADAR_TIMEOUT_MS=30000
 BACKUPRADAR_USER_AGENT=my-mcp-integration/1.0
+```
+
+### Huntress
+```env
+HUNTRESS_API_KEY=hk_your_api_key_here
+HUNTRESS_API_SECRET=your_api_secret_here
+
+# Optional
+HUNTRESS_BASE_URL=https://api.huntress.io
 ```
 
 ## Development
@@ -204,6 +233,7 @@ Each package may have its own license. Please check the individual package direc
 - BackupRadar MCP: ISC
 - ConnectWise RMM MCP: ISC
 - ConnectWise PSA MCP: ISC
+- Huntress MCP: MIT
 
 ## Author
 

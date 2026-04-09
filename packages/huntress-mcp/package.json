@@ -1,0 +1,41 @@
+{
+  "name": "@adamhancock/huntress-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Huntress API integration with cybersecurity monitoring and incident response capabilities",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "huntress-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "inspector": "npx @modelcontextprotocol/inspector tsx --env-file=.env src/index.ts",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "huntress",
+    "api",
+    "cybersecurity",
+    "security-monitoring",
+    "incident-response",
+    "threat-detection"
+  ],
+  "author": "Adam Hancock",
+  "license": "MIT",
+  "packageManager": "pnpm@10.13.1",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

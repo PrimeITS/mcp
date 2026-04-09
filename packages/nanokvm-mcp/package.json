@@ -1,0 +1,37 @@
+{
+  "name": "@adamhancock/nanokvm-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Sipeed NanoKVM devices",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "inspector": "npx @modelcontextprotocol/inspector tsx --env-file=.env src/index.ts",
+    "prepare": "npm run build"
+  },
+  "bin": {
+    "nanokvm-mcp": "dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "nanokvm",
+    "sipeed",
+    "kvm",
+    "ipmi"
+  ],
+  "author": "Adam Hancock",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@10.13.1"
+}
